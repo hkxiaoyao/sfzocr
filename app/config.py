@@ -12,7 +12,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 API_V1_PREFIX = "/api/v1"
 PROJECT_NAME = "身份证OCR识别服务"
 DEBUG = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
-VERSION = "0.1.0"
+VERSION = "0.1.1"
 
 # 服务器配置
 HOST = os.getenv("HOST", "0.0.0.0")
