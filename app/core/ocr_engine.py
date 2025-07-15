@@ -151,13 +151,18 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
             if id_number:
                 id_card_info["id_number"] = id_number
             
+            # 智能姓名提取 - 支持分离的文本块
+            name_value = _extract_name_smart(text_blocks)
+            if name_value:
+                id_card_info["name"] = name_value
+            
             # 提取其他字段
             field_patterns = {
-                "姓名": r"姓名[\s:：]*(.+)",
                 "性别": r"性别[\s:：]*([男女])",  # 修改性别匹配模式，只匹配"男"或"女"
                 "民族": r"民族[\s:：]*(.+)",
                 "出生": r"出生[\s:：]*(.+)"
                 # 移除住址字段，让它由后续的地址合并逻辑处理
+                # 移除姓名字段，由智能提取处理
             }
             
             # 遍历文本块提取信息
@@ -376,6 +381,105 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
     except Exception as e:
         logger.error(f"提取身份证信息失败: {str(e)}")
         return {}
+
+def _extract_name_smart(text_blocks: List[Dict[str, Any]]) -> Optional[str]:
+    """
+    智能提取姓名，支持分离的文本块
+    
+    Args:
+        text_blocks: 文本块列表
+        
+    Returns:
+        提取的姓名或None
+    """
+    # 方法1：尝试在同一文本块中找到姓名
+    for block in text_blocks:
+        text = block["text"].strip()
+        # 检查是否在同一块中包含姓名标签和姓名
+        match = re.search(r"姓名[\s:：]*(.+)", text)
+        if match:
+            name = match.group(1).strip()
+            if name and len(name) <= 10:  # 姓名长度验证
+                logger.info(f"在同一文本块中提取姓名: {name}")
+                return name
+    
+    # 方法2：查找"姓名"标签，然后在附近的文本块中查找姓名
+    name_label_block = None
+    for block in text_blocks:
+        text = block["text"].strip()
+        if text == "姓名" or "姓名" in text:
+            name_label_block = block
+            break
+    
+    if name_label_block:
+        name_label_center = name_label_block["center"]
+        logger.debug(f"找到姓名标签块，位置: {name_label_center}")
+        
+        # 在附近查找可能的姓名文本块
+        candidate_blocks = []
+        for block in text_blocks:
+            if block == name_label_block:
+                continue
+            
+            text = block["text"].strip()
+            block_center = block["center"]
+            
+            # 跳过明显不是姓名的文本
+            if text in ["性别", "民族", "出生", "住址", "公民身份号码"] or len(text) > 10:
+                continue
+            
+            # 计算与姓名标签的距离
+            distance = ((block_center[0] - name_label_center[0]) ** 2 + 
+                       (block_center[1] - name_label_center[1]) ** 2) ** 0.5
+            
+            # 检查是否为有效的姓名格式
+            if _is_valid_name(text):
+                candidate_blocks.append((block, distance, text))
+                logger.debug(f"找到姓名候选: '{text}'，距离: {distance:.1f}")
+        
+        # 按距离排序，选择最近的有效姓名
+        if candidate_blocks:
+            candidate_blocks.sort(key=lambda x: x[1])  # 按距离排序
+            closest_name = candidate_blocks[0][2]
+            logger.info(f"基于位置关联提取姓名: {closest_name}")
+            return closest_name
+    
+    # 方法3：如果前两种方法都失败，尝试查找看起来像姓名的文本
+    for block in text_blocks:
+        text = block["text"].strip()
+        if _is_valid_name(text) and len(text) >= 2 and len(text) <= 5:
+            # 确保不是其他标识词
+            if text not in ["性别", "民族", "出生", "住址", "公民", "身份", "号码"]:
+                logger.info(f"通过格式匹配提取姓名: {text}")
+                return text
+    
+    logger.warning("未能提取到姓名")
+    return None
+
+def _is_valid_name(text: str) -> bool:
+    """
+    检查文本是否可能是有效的姓名
+    
+    Args:
+        text: 待检查的文本
+        
+    Returns:
+        是否为有效姓名格式
+    """
+    if not text or len(text) < 2 or len(text) > 5:
+        return False
+    
+    # 检查是否主要由中文字符组成
+    chinese_chars = sum(1 for char in text if '\u4e00' <= char <= '\u9fff')
+    if chinese_chars < len(text) * 0.8:  # 至少80%是中文字符
+        return False
+    
+    # 排除常见的非姓名词汇
+    exclude_words = ["性别", "民族", "出生", "住址", "公民", "身份", "号码", "签发", "机关", "有效", "期限"]
+    if any(word in text for word in exclude_words):
+        return False
+    
+    return True
 
 def _extract_id_number(text_blocks: List[Dict[str, Any]]) -> Optional[str]:
     """

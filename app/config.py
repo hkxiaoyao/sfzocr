@@ -21,11 +21,11 @@ WORKERS = int(os.getenv("WORKERS", "4"))  # 工作进程数
 
 # OCR配置
 OCR_MODEL_DIR = os.getenv("OCR_MODEL_DIR", str(BASE_DIR / "models"))
-OCR_PROCESS_POOL_SIZE = int(os.getenv("OCR_PROCESS_POOL_SIZE", "2"))  # OCR处理进程池大小
+OCR_PROCESS_POOL_SIZE = int(os.getenv("OCR_PROCESS_POOL_SIZE", "4"))  # OCR处理进程池大小
 OCR_TASK_TIMEOUT = int(os.getenv("OCR_TASK_TIMEOUT", "30"))  # OCR任务超时时间(秒)
 
 # 日志配置
-LOG_LEVEL = os.getenv("LOG_LEVEL", "DEBUG")  # 将INFO改为DEBUG
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")  # 优化性能，减少日志输出
 LOG_DIR = os.getenv("LOG_DIR", str(BASE_DIR / "logs"))
 LOG_FILENAME = os.getenv("LOG_FILENAME", "sfzocr.log")
 LOG_ROTATION = os.getenv("LOG_ROTATION", "20 MB")
@@ -37,7 +37,7 @@ os.makedirs(OCR_MODEL_DIR, exist_ok=True)
 
 # 身份证识别配置
 ID_CARD_CONFIG = {
-    "use_angle_cls": True,  # 使用角度分类器
+    "use_angle_cls": False,  # 禁用角度分类器以提高速度
     "det": True,            # 使用文本检测
     "rec": True,            # 使用文本识别
     "cls": True,            # 使用方向分类

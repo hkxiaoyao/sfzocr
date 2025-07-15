@@ -88,7 +88,7 @@ class ImageProcessor:
         return img_base64
     
     @staticmethod
-    def resize_image(image: np.ndarray, max_size: int = 1600) -> np.ndarray:
+    def resize_image(image: np.ndarray, max_size: int = 1200) -> np.ndarray:
         """
         调整图像大小，保持宽高比
         
@@ -138,6 +138,28 @@ class ImageProcessor:
         
         # 降噪
         enhanced = cv2.fastNlMeansDenoising(enhanced, None, 10, 7, 21)
+        
+        # 转回彩色图像
+        enhanced_color = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
+        
+        return enhanced_color
+    
+    @staticmethod
+    def enhance_image_fast(image: np.ndarray) -> np.ndarray:
+        """
+        快速图像增强，简化版本以提高性能
+        
+        Args:
+            image: 原始图像
+            
+        Returns:
+            增强后的图像
+        """
+        # 转换为灰度图
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        
+        # 简单的对比度增强
+        enhanced = cv2.convertScaleAbs(gray, alpha=1.2, beta=10)
         
         # 转回彩色图像
         enhanced_color = cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR)
@@ -354,25 +376,12 @@ class ImageProcessor:
             logger.info(f"图像解码完成，尺寸: {image.shape[1]}x{image.shape[0]}，耗时: {(time.time() - start_time)*1000:.2f}ms")
             
             # 调整图像大小
-            start_time = time.time()
             image = cls.resize_image(image)
-            logger.info(f"图像大小调整完成，调整后尺寸: {image.shape[1]}x{image.shape[0]}，耗时: {(time.time() - start_time)*1000:.2f}ms")
+            logger.info(f"图像大小调整完成，调整后尺寸: {image.shape[1]}x{image.shape[0]}")
             
-            # 检测并裁剪身份证区域
-            start_time = time.time()
-            image, detected = cls.detect_id_card(image)
-            logger.info(f"身份证检测{'成功' if detected else '失败'}，耗时: {(time.time() - start_time)*1000:.2f}ms")
-            
-            # 如果检测到身份证，进行校正
-            if detected:
-                start_time = time.time()
-                image = cls.correct_skew(image)
-                logger.info(f"图像校正完成，耗时: {(time.time() - start_time)*1000:.2f}ms")
-            
-            # 增强图像
-            start_time = time.time()
-            image = cls.enhance_image(image)
-            logger.info(f"图像增强完成，耗时: {(time.time() - start_time)*1000:.2f}ms")
+            # 跳过耗时的轮廓检测和校正，直接进行轻量图像增强
+            image = cls.enhance_image_fast(image)
+            logger.info("快速图像增强完成")
             
             logger.info("身份证图像预处理流程完成")
             return image
