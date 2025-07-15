@@ -359,7 +359,7 @@ class ImageProcessor:
     @classmethod
     def preprocess_id_card_image(cls, image_data: Union[str, bytes]) -> np.ndarray:
         """
-        身份证图像预处理流程
+        身份证图像预处理流程（内存优化版本）
         
         Args:
             image_data: base64编码的图像数据或二进制图像数据
@@ -368,22 +368,39 @@ class ImageProcessor:
             预处理后的图像
         """
         try:
-            logger.info("开始身份证图像预处理流程")
+            # 导入垃圾回收模块用于内存优化
+            import gc
+            from app.config import MEMORY_OPTIMIZATION
+            
+            if MEMORY_OPTIMIZATION:
+                logger.debug("开始身份证图像预处理流程（内存优化模式）")
             
             # 解码图像
             start_time = time.time()
             image = cls.decode_image(image_data)
-            logger.info(f"图像解码完成，尺寸: {image.shape[1]}x{image.shape[0]}，耗时: {(time.time() - start_time)*1000:.2f}ms")
+            if MEMORY_OPTIMIZATION:
+                logger.debug(f"图像解码完成，尺寸: {image.shape[1]}x{image.shape[0]}，耗时: {(time.time() - start_time)*1000:.2f}ms")
             
             # 调整图像大小
-            image = cls.resize_image(image)
-            logger.info(f"图像大小调整完成，调整后尺寸: {image.shape[1]}x{image.shape[0]}")
+            image = cls.resize_image(image, max_size=800)  # 降低最大尺寸以节省内存
+            if MEMORY_OPTIMIZATION:
+                logger.debug(f"图像大小调整完成，调整后尺寸: {image.shape[1]}x{image.shape[0]}")
             
-            # 跳过耗时的轮廓检测和校正，直接进行轻量图像增强
-            image = cls.enhance_image_fast(image)
-            logger.info("快速图像增强完成")
+            # 内存优化：跳过复杂的轮廓检测和校正，仅进行必要的增强
+            if MEMORY_OPTIMIZATION:
+                # 使用最轻量的处理，直接返回调整大小后的图像
+                logger.debug("跳过图像增强以节省内存")
+                gc.collect()  # 强制垃圾回收
+                return image
+            else:
+                # 保持原有的增强逻辑用于兼容性
+                image = cls.enhance_image_fast(image)
+                logger.debug("快速图像增强完成")
             
-            logger.info("身份证图像预处理流程完成")
+            if MEMORY_OPTIMIZATION:
+                gc.collect()  # 强制垃圾回收
+                logger.debug("身份证图像预处理流程完成（内存优化）")
+            
             return image
             
         except Exception as e:

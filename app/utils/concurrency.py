@@ -5,10 +5,12 @@ import os
 import time
 import asyncio
 import concurrent.futures
+import psutil
+import gc
 from typing import Any, Callable, Dict, List, Optional, TypeVar, Union
 from functools import partial
 
-from app.config import OCR_PROCESS_POOL_SIZE, OCR_TASK_TIMEOUT
+from app.config import OCR_PROCESS_POOL_SIZE, OCR_TASK_TIMEOUT, MEMORY_OPTIMIZATION, ENABLE_GC_AFTER_REQUEST
 from app.utils.logger import get_logger
 
 # 类型变量
@@ -37,7 +39,27 @@ class ProcessPoolManager:
             max_workers=OCR_PROCESS_POOL_SIZE
         )
         self._initialized = True
-        logger.info(f"进程池已初始化，工作进程数: {OCR_PROCESS_POOL_SIZE}")
+        self._log_memory_usage("进程池初始化")
+        logger.info(f"进程池已初始化，工作进程数: {OCR_PROCESS_POOL_SIZE} (内存优化模式: {MEMORY_OPTIMIZATION})")
+    
+    def _log_memory_usage(self, operation: str):
+        """记录内存使用情况"""
+        try:
+            process = psutil.Process()
+            memory_info = process.memory_info()
+            memory_mb = memory_info.rss / 1024 / 1024
+            
+            if MEMORY_OPTIMIZATION:
+                logger.debug(f"[内存监控] {operation} - 当前进程内存使用: {memory_mb:.1f}MB")
+            else:
+                logger.info(f"[内存监控] {operation} - 当前进程内存使用: {memory_mb:.1f}MB")
+                
+            # 如果内存使用超过阈值，记录警告
+            if memory_mb > 1024:  # 超过1GB发出警告
+                logger.warning(f"[内存警告] 进程内存使用过高: {memory_mb:.1f}MB")
+                
+        except Exception as e:
+            logger.debug(f"内存监控失败: {str(e)}")
     
     async def run_task(self, func: Callable[..., R], *args, **kwargs) -> R:
         """
@@ -58,7 +80,9 @@ class ProcessPoolManager:
         loop = asyncio.get_running_loop()
         
         start_time = time.time()
-        logger.debug(f"开始执行任务: {func.__name__}")
+        if MEMORY_OPTIMIZATION:
+            logger.debug(f"开始执行任务: {func.__name__}")
+            self._log_memory_usage(f"任务开始-{func.__name__}")
         
         try:
             # 使用run_in_executor在进程池中执行函数
@@ -76,7 +100,17 @@ class ProcessPoolManager:
                 )
             
             execution_time = time.time() - start_time
-            logger.debug(f"任务 {func.__name__} 执行完成，耗时: {execution_time:.2f}秒")
+            
+            # 内存优化：任务完成后进行垃圾回收
+            if ENABLE_GC_AFTER_REQUEST:
+                gc.collect()
+                
+            if MEMORY_OPTIMIZATION:
+                logger.debug(f"任务 {func.__name__} 执行完成，耗时: {execution_time:.2f}秒")
+                self._log_memory_usage(f"任务完成-{func.__name__}")
+            else:
+                logger.debug(f"任务 {func.__name__} 执行完成，耗时: {execution_time:.2f}秒")
+                
             return result
             
         except asyncio.TimeoutError:

@@ -102,7 +102,7 @@ def recognize_text(image: np.ndarray) -> List[List[Tuple[List[List[int]], str, f
 
 def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -> Dict[str, Any]:
     """
-    提取身份证信息
+    提取身份证信息（内存优化版本）
     
     Args:
         image_data: base64编码的图像数据或二进制图像数据
@@ -111,12 +111,24 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
     Returns:
         提取的身份证信息字典
     """
+    import gc
+    from app.config import MEMORY_OPTIMIZATION, ENABLE_GC_AFTER_REQUEST
+    
     try:
         # 预处理图像
         image = ImageProcessor.preprocess_id_card_image(image_data)
         
+        # 内存优化：在OCR前进行垃圾回收
+        if MEMORY_OPTIMIZATION:
+            gc.collect()
+        
         # 识别文字
         ocr_result = recognize_text(image)
+        
+        # 内存优化：清除图像变量以释放内存
+        if MEMORY_OPTIMIZATION:
+            del image
+            gc.collect()
         
         # 提取身份证信息
         id_card_info = {}
@@ -209,6 +221,11 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
                 if "住址" in text:
                     address_blocks.append(block)
                 elif address_blocks:
+                    # 关键修复：在收集地址块时优先排除身份证号码
+                    if re.match(r'^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', text):
+                        logger.debug(f"收集地址块时跳过身份证号码: {text}")
+                        continue
+                        
                     # 如果已经有住址块，检查当前块是否可能是地址的延续
                     # 放宽条件，不再排除包含特定关键词的块，因为地址可能包含门牌号等信息
                     # 通过检查y坐标和位置关系来判断是否是地址的延续
@@ -223,6 +240,8 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
                         if _is_valid_address_text(text):
                             address_blocks.append(block)
                             logger.debug(f"添加地址延续块: {text}")
+                        else:
+                            logger.debug(f"文本不符合地址格式，跳过: {text}")
                 
                 # 尝试提取出生日期，可能在"出生"文本块的附近
                 if "出生" in text and "birth" not in id_card_info:
@@ -271,15 +290,18 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
                         text = re.sub(r"住址[\s:：]*", "", text)
                         logger.debug(f"住址块处理: '{original_text}' -> '{text}'")
                     
-                    # 直接添加所有地址块的文本，不再按行分组
-                    # 因为OCR识别的文本块已经是有意义的单位，应该直接合并
-                    if text:  # 确保文本不为空
-                        address_parts.append(text)
-                        logger.debug(f"添加地址部分: '{text}'")
+                    # 关键修复：过滤掉身份证号码
+                    if text and _is_valid_address_text(text):
+                        # 额外检查：确保不是身份证号码
+                        if not re.match(r'^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', text):
+                            address_parts.append(text)
+                            logger.debug(f"添加地址部分: '{text}'")
+                        else:
+                            logger.debug(f"跳过身份证号码: '{text}'")
                     else:
-                        logger.debug(f"跳过空文本块")
+                        logger.debug(f"跳过无效地址文本: '{text}'")
                 
-                logger.debug(f"所有地址部分: {address_parts}")
+                logger.debug(f"过滤后的地址部分: {address_parts}")
                 
                 # 合并所有地址组件，不使用空格分隔（符合中文地址格式）
                 address = "".join(address_parts)
@@ -298,6 +320,12 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
                     for block in text_blocks:
                         if block not in address_blocks:  # 避免重复处理已包含的块
                             text = block["text"].strip()
+                            
+                            # 关键修复：先排除身份证号码
+                            if re.match(r'^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', text):
+                                logger.debug(f"跳过身份证号码，不作为门牌号: {text}")
+                                continue
+                                
                             # 检查是否是门牌号格式（更广泛的模式）
                             # 扩展门牌号识别模式，包括更多组合形式
                             if (re.match(r'^\d+号?$', text) or  # 纯数字或数字+号
@@ -306,6 +334,12 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
                                 re.match(r'^\d+[A-Za-z]号?$', text) or  # 数字+字母
                                 re.match(r'^[村组社区队]\d+号?$', text) or  # 村/组/社区/队+数字
                                 re.match(r'.*[村组社区队]\d+号?$', text)):  # 任意文本+村/组/社区/队+数字
+                                
+                                # 再次确认不是身份证号码
+                                if len(text) >= 15:  # 身份证号码长度检查
+                                    logger.debug(f"疑似身份证号码，跳过: {text}")
+                                    continue
+                                    
                                 # 检查位置是否在最后一个地址块附近
                                 if address_blocks:
                                     last_block = address_blocks[-1]
@@ -328,7 +362,14 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
                         number_blocks = []
                         for block in text_blocks:
                             text = block["text"].strip()
-                            if re.search(r'\d+', text) and len(text) < 10:  # 避免误匹配身份证号等长数字
+                            
+                            # 关键修复：严格排除身份证号码
+                            if re.match(r'^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', text):
+                                logger.debug(f"排除身份证号码，不作为地址数字块: {text}")
+                                continue
+                                
+                            # 排除长数字串（可能是身份证号码）
+                            if re.search(r'\d+', text) and len(text) < 10 and len(text) < 15:  # 避免误匹配身份证号等长数字
                                 number_blocks.append(block)
                         
                         # 如果找到数字块，选择最接近地址块的一个
@@ -337,11 +378,16 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
                             closest_block = min(number_blocks, 
                                                key=lambda b: abs(b["center"][1] - last_address_block["center"][1]))
                             
-                            # 如果距离合理，添加到地址
-                            # 放宽垂直距离限制，从100增加到150
-                            if abs(closest_block["center"][1] - last_address_block["center"][1]) < 150:
-                                id_card_info["address"] += closest_block["text"]
-                                logger.info(f"添加数字块后的地址: {id_card_info['address']}")
+                            # 再次确认不是身份证号码
+                            closest_text = closest_block["text"].strip()
+                            if not re.match(r'^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', closest_text):
+                                # 如果距离合理，添加到地址
+                                # 放宽垂直距离限制，从100增加到150
+                                if abs(closest_block["center"][1] - last_address_block["center"][1]) < 150:
+                                    id_card_info["address"] += closest_text
+                                    logger.info(f"添加数字块后的地址: {id_card_info['address']}")
+                            else:
+                                logger.debug(f"最接近的数字块是身份证号码，跳过: {closest_text}")
                     
                     # 添加地址后处理逻辑
                     processed_address = _post_process_address(id_card_info["address"], text_blocks)
@@ -374,12 +420,22 @@ def extract_id_card_info(image_data: Union[str, bytes], is_front: bool = True) -
                         id_card_info["valid_period"] = match.group(1).strip()
         
         # 记录提取结果
-        logger.info(f"提取的身份证信息: {id_card_info}")
+        if MEMORY_OPTIMIZATION:
+            logger.debug(f"提取的身份证信息字段数: {len(id_card_info)}")
+        else:
+            logger.info(f"提取的身份证信息: {id_card_info}")
+        
+        # 内存优化：函数结束前进行垃圾回收
+        if ENABLE_GC_AFTER_REQUEST:
+            gc.collect()
         
         return id_card_info
         
     except Exception as e:
         logger.error(f"提取身份证信息失败: {str(e)}")
+        # 内存优化：异常情况下也进行垃圾回收
+        if ENABLE_GC_AFTER_REQUEST:
+            gc.collect()
         return {}
 
 def _extract_name_smart(text_blocks: List[Dict[str, Any]]) -> Optional[str]:
@@ -581,6 +637,11 @@ def _post_process_address(address: str, text_blocks: List[Dict[str, Any]]) -> st
             if "住址" in text or not _is_valid_address_text(text):
                 continue
                 
+            # 关键修复：排除身份证号码
+            if re.match(r'^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', text):
+                logger.debug(f"_post_process_address: 跳过身份证号码 {text}")
+                continue
+                
             village_match = re.search(r'([^住址]*[村组社区队])', text)
             if village_match:
                 village_name = village_match.group(1)
@@ -606,10 +667,21 @@ def _post_process_address(address: str, text_blocks: List[Dict[str, Any]]) -> st
             if "住址" in text or len(text) > 20 or not _is_valid_address_text(text):  # 增加地址有效性检查
                 continue
                 
+            # 关键修复：排除身份证号码
+            if re.match(r'^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', text):
+                logger.debug(f"_post_process_address: 跳过身份证号码门牌号检查 {text}")
+                continue
+                
             for pattern in house_number_patterns:
                 match = re.search(pattern, text)
                 if match:
                     house_number = match.group(1)
+                    
+                    # 再次检查门牌号是否是身份证号码
+                    if re.match(r'^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', house_number):
+                        logger.debug(f"_post_process_address: 匹配的门牌号是身份证号码，跳过: {house_number}")
+                        continue
+                        
                     if house_number not in processed_address:
                         processed_address += house_number
                         logger.debug(f"添加门牌号: {house_number}")
@@ -695,10 +767,20 @@ def _apply_address_rules(address: str, name: str, text_blocks: List[Dict[str, An
         # 查找可能是门牌号的独立文本块
         for block in text_blocks:
             text = block["text"].strip()
-            if re.match(r'^\d+号?$', text) and len(text) < 10:  # 避免误匹配身份证号等长数字
-                address += " " + text
-                logger.info(f"应用规则3：添加独立门牌号 '{text}'")
-                return address
+            
+            # 关键修复：严格排除身份证号码
+            if re.match(r'^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', text):
+                logger.debug(f"_apply_address_rules: 跳过身份证号码 {text}")
+                continue
+                
+            if re.match(r'^\d+号?$', text) and len(text) < 10 and len(text) < 15:  # 避免误匹配身份证号等长数字
+                # 再次确认不是身份证号码
+                if not re.match(r'^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', text):
+                    address += " " + text
+                    logger.info(f"应用规则3：添加独立门牌号 '{text}'")
+                    return address
+                else:
+                    logger.debug(f"_apply_address_rules: 规则3中发现身份证号码，跳过: {text}")
     
     logger.debug("地址规则引擎：未触发任何规则，返回原始地址")
     return address
@@ -715,25 +797,29 @@ def _is_valid_address_text(text: str) -> bool:
     """
     text = text.strip()
     
-    # 排除条件
-    # 1. 排除身份证号码（15位或18位数字）
-    if re.match(r'^\d{15}$|^\d{17}[\dXx]$', text):
+    # 强化排除条件 - 优先级最高
+    # 1. 强化身份证号码检测（15位或18位数字，包含X结尾）
+    if re.match(r'^\d{15}$|^[1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}(?:\d|X|x)$', text):
         return False
     
-    # 2. 排除包含"公民身份号码"的文本
+    # 2. 排除纯数字且长度超过10位的文本（很可能是身份证号）
+    if re.match(r'^\d{10,}$', text):
+        return False
+    
+    # 3. 排除包含"公民身份号码"的文本
     if "公民身份号码" in text or "身份号码" in text:
         return False
     
-    # 3. 排除单纯的年份（4位数字，1900-2100年）
+    # 4. 排除单纯的年份（4位数字，1900-2100年）
     if re.match(r'^(19|20)\d{2}$', text):
         return False
     
-    # 4. 排除过长的数字串（超过8位连续数字）
-    if re.match(r'^\d{9,}$', text):
+    # 5. 排除包含出生日期相关关键词但不包含地址关键词的文本
+    if any(keyword in text for keyword in ["出生", "生日"]) and not any(addr_keyword in text for addr_keyword in ["省", "市", "区", "县", "乡", "镇", "村", "组", "路", "街", "道", "号", "室", "栋", "单元"]):
         return False
     
-    # 5. 排除包含出生日期相关关键词的文本
-    if any(keyword in text for keyword in ["出生", "生日", "年", "月", "日"]) and not any(addr_keyword in text for addr_keyword in ["省", "市", "区", "县", "乡", "镇", "村", "组", "路", "街", "道", "号", "室", "栋", "单元"]):
+    # 6. 排除性别、民族等个人信息字段
+    if text in ["男", "女", "汉", "回", "蒙", "藏", "维", "苗", "彝", "壮", "满"]:
         return False
     
     # 包含条件：必须包含地址相关关键词

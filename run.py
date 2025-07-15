@@ -55,14 +55,22 @@ def main():
     """主函数"""
     args = parse_args()
     
+    # 内存优化：强制使用单worker以减少内存占用
+    effective_workers = 1  # 强制单worker模式以优化内存使用
+    
+    print(f"内存优化模式启动:")
+    print(f"  - Worker进程数: {effective_workers} (内存优化)")
+    print(f"  - 监听地址: {args.host}:{args.port}")
+    print(f"  - 调试模式: {args.debug}")
+    
     # 启动服务
     uvicorn.run(
         "app.main:app",
         host=args.host,
         port=args.port,
-        workers=args.workers if not args.debug else 1,  # 调试模式下只使用一个工作进程
+        workers=effective_workers,  # 使用内存优化的worker数量
         reload=args.debug,  # 调试模式下启用自动重载
-        log_level="debug" if args.debug else "info",
+        log_level="debug" if args.debug else "warning",  # 降低日志级别以节省内存
     )
 
 if __name__ == "__main__":
