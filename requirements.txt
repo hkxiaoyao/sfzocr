@@ -1,0 +1,20 @@
+# Web框架
+fastapi==0.104.1
+uvicorn==0.23.2
+
+# 图像处理
+opencv-python==4.8.1.78
+numpy==1.26.1
+Pillow==10.1.0
+
+# OCR引擎
+paddlepaddle==2.5.2
+paddleocr>=2.6.0.3,<2.7.0
+
+# 工具
+python-multipart==0.0.6
+pydantic==2.4.2
+loguru==0.7.2
+
+# 测试
+pytest==7.4.3
