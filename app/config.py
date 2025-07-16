@@ -17,11 +17,42 @@ from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 # ============================================================================
-# 基础配置（一般不需要修改）
+# 🔧 环境变量加载
 # ============================================================================
 
-# 项目根目录
-BASE_DIR = Path(__file__).resolve().parent.parent
+# 尝试加载 .env 文件
+try:
+    from dotenv import load_dotenv
+    
+    # 项目根目录
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    
+    # 查找 .env 文件
+    env_files = [
+        BASE_DIR / ".env",           # 项目根目录
+        BASE_DIR / "config.env",     # 配置文件
+        Path.cwd() / ".env",         # 当前工作目录
+    ]
+    
+    env_loaded = False
+    for env_file in env_files:
+        if env_file.exists():
+            load_dotenv(env_file)
+            print(f"✅ 已加载环境配置文件: {env_file}")
+            env_loaded = True
+            break
+    
+    if not env_loaded:
+        print("💡 未找到 .env 配置文件，使用默认配置和系统环境变量")
+        
+except ImportError:
+    print("⚠️  python-dotenv 未安装，请运行: pip install python-dotenv")
+    print("   将使用系统环境变量和默认配置")
+    BASE_DIR = Path(__file__).resolve().parent.parent
+
+# ============================================================================
+# 基础配置（一般不需要修改）
+# ============================================================================
 
 # API版本前缀
 API_V1_PREFIX = "/api/v1"
