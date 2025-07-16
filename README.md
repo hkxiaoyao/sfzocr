@@ -75,7 +75,7 @@
 将项目代码下载到本地，或者直接使用git克隆：
 
 ```bash
-git clone https://github.com/yourusername/sfzocr.git
+git clone https://github.com/hkxiaoyao/sfzocr.git
 cd sfzocr
 ```
 
