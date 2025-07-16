@@ -1,0 +1,29 @@
+新版
+姓名：证件样本
+Name：ZHENGJIAN，YANGBEN
+性别：女
+Sex：F
+出生日期：1981.08.03
+Date of Birth：1981.08.03
+国籍：加拿大
+Nationality：CAN
+有效期限：2023.09.15-2033.09.14
+Period of Validity：2023.09.15-2033.09.14
+证件号码：911124198108030024
+ID No.：911124198108030024
+
+旧版
+Name：ZHENGJIAN,YANGBEN
+姓名：证件样本
+性别：女
+Sex：F
+出生日期：1981.08.03
+Date of Birth：1981.08.03
+国籍：加拿大
+Nationality：CAN
+有效期限：2023.09.15-2033.09.14
+Period of Validity：2023.09.15-2033.09.14
+签发机关：中华人民共和国国家移民管理局
+Issuing Authority：National lmmigration Administration,PRC
+证件号码：CAN110081080310
+Card No.：CAN110081080310

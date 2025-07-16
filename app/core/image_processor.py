@@ -15,6 +15,18 @@ from app.utils.logger import get_logger
 # 获取logger
 logger = get_logger("image_processor")
 
+# 导入性能配置 - v0.1.4新增
+try:
+    from app.config import OCR_PERFORMANCE_CONFIG
+except ImportError:
+    # 兼容性处理
+    OCR_PERFORMANCE_CONFIG = {
+        "max_image_size": 1600,
+        "resize_quality": 85,
+        "enable_fast_mode": False,
+        "enable_memory_optimization": True,
+    }
+
 class ImageProcessor:
     """图像处理类，用于身份证图像的预处理"""
     
@@ -356,6 +368,66 @@ class ImageProcessor:
             logger.error(f"图像校正失败: {str(e)}")
             return image
     
+    @classmethod
+    def preprocess_id_card_image_fast(cls, image_data: Union[str, bytes]) -> np.ndarray:
+        """
+        身份证图像快速预处理流程 - v0.1.4性能优化版本
+        
+        Args:
+            image_data: base64编码的图像数据或二进制图像数据
+            
+        Returns:
+            预处理后的图像
+        """
+        try:
+            start_time = time.time()
+            
+            # 解码图像
+            image = cls.decode_image(image_data)
+            original_size = image.shape[1] * image.shape[0]
+            
+            # 🚀 性能优化：智能尺寸调整
+            max_size = OCR_PERFORMANCE_CONFIG["max_image_size"]
+            
+            # 如果启用快速模式，进一步降低尺寸限制
+            if OCR_PERFORMANCE_CONFIG["enable_fast_mode"]:
+                max_size = min(max_size, 1200)  # 快速模式下最大1200像素
+            
+            # 调整图像大小
+            if max(image.shape[:2]) > max_size:
+                image = cls.resize_image(image, max_size=max_size)
+                logger.debug(f"图像尺寸优化：{original_size//1000}K -> {(image.shape[1]*image.shape[0])//1000}K 像素")
+            
+            # 🏃‍♂️ 快速模式：跳过复杂的图像增强
+            if OCR_PERFORMANCE_CONFIG["enable_fast_mode"]:
+                # 仅进行基本的对比度调整
+                alpha = 1.1  # 对比度因子
+                beta = 10    # 亮度调整
+                image = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+                logger.debug("快速模式：跳过复杂图像增强")
+            else:
+                # 使用轻量级增强
+                image = cls.enhance_image_fast(image)
+            
+            # 内存优化
+            if OCR_PERFORMANCE_CONFIG["enable_memory_optimization"]:
+                import gc
+                gc.collect()
+            
+            processing_time = (time.time() - start_time) * 1000
+            logger.debug(f"快速图像预处理完成，耗时: {processing_time:.2f}ms")
+            
+            return image
+            
+        except Exception as e:
+            logger.error(f"快速图像预处理失败: {str(e)}")
+            # 降级到基本解码
+            try:
+                return cls.decode_image(image_data)
+            except:
+                logger.error("无法解码图像，返回空白图像")
+                return np.zeros((300, 500, 3), dtype=np.uint8)
+
     @classmethod
     def preprocess_id_card_image(cls, image_data: Union[str, bytes]) -> np.ndarray:
         """

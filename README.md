@@ -2,16 +2,52 @@
 
 这是一个基于Python的身份证OCR识别服务端，提供REST API接口，支持高并发处理和性能优化。
 
+## 📚 目录
+
+1. [项目介绍](#项目介绍)
+2. [功能特点](#功能特点)
+3. [环境要求](#环境要求)
+4. [快速开始](#-快速开始)
+5. [配置管理](#-配置管理)
+6. [性能优化](#-性能优化)
+7. [API接口](#api接口)
+8. [部署指南](#-部署指南)
+9. [故障排查](#-故障排查)
+10. [开发说明](#开发说明)
+11. [版本更新](#-版本更新记录)
+
 ## 项目介绍
 
 这是一个基于Python开发的身份证OCR识别服务，可以通过API接口识别身份证上的文字信息，支持并发处理多个请求。
 
-主要功能：
-- 身份证正面识别（姓名、性别、民族、出生日期、住址、身份证号）
-- 身份证背面识别（签发机关、有效期限）
-- 支持批量识别多张身份证图片
-- 提供REST API接口，方便集成到其他系统
-- 支持Base64编码和文件上传两种方式提交图片
+### 主要功能
+- 🇨🇳 **中国身份证识别**：正面（姓名、性别、民族、出生日期、住址、身份证号）、背面（签发机关、有效期限）
+- 🌍 **外国人永久居留身份证识别**：支持新版和旧版外国人永久居留身份证
+- 🤖 **智能自动检测**：无需手动指定证件类型，系统自动识别证件种类
+- 📦 **批量处理**：支持批量识别多张证件图片
+- 🔌 **REST API接口**：提供标准化API，方便集成到其他系统
+- 📄 **多种上传方式**：支持Base64编码和文件上传两种方式提交图片
+
+### 技术栈
+- **FastAPI**: 现代高性能Web框架
+- **PaddleOCR**: 百度开源OCR引擎
+- **OpenCV**: 图像处理库
+- **Uvicorn**: 高性能ASGI服务器
+- **Loguru**: 现代Python日志库
+
+## 功能特点
+
+- 🎯 **高精度识别**：基于PaddleOCR的专业证件识别
+- 🤖 **智能自动检测**：无需指定证件类型，系统自动识别中国身份证和外国人永久居留身份证
+- 🌍 **多证件支持**：支持中国身份证、新版/旧版外国人永久居留身份证
+- 🚀 **高并发支持**：多进程架构，支持高并发请求处理
+- 🔧 **性能可调**：丰富的配置选项，适应不同硬件环境
+- 📝 **RESTful API**：标准化接口，易于集成
+- 📊 **详细日志**：完整的请求日志和错误跟踪
+- 💾 **内存优化**：智能内存管理，适合资源受限环境
+- 🔒 **安全认证**：支持API密钥验证
+- 📱 **多种格式**：支持Base64和文件上传两种方式
+- 🔄 **向后兼容**：完全兼容现有API调用方式
 
 ## 环境要求
 
@@ -27,27 +63,6 @@
 | 💾 内存受限 | 4核+ | 4-8GB | 4并发 | 小型部署、内存有限 |
 | 🔧 生产推荐 | 4-8核 | 8-16GB | 8并发 | 一般生产环境 |
 | 🚀 高性能 | 8核+ | 16GB+ | 16并发+ | 高并发生产环境 |
-
-> 💡 **配置优化提示**：详细的性能优化配置请参考 [📖 配置优化指南](CONFIG_OPTIMIZATION.md)
-
-## 功能特点
-
-- 🎯 **高精度识别**：基于PaddleOCR的专业身份证识别
-- 🚀 **高并发支持**：多进程架构，支持高并发请求处理
-- 🔧 **性能可调**：丰富的配置选项，适应不同硬件环境
-- 📝 **RESTful API**：标准化接口，易于集成
-- 📊 **详细日志**：完整的请求日志和错误跟踪
-- 💾 **内存优化**：智能内存管理，适合资源受限环境
-- 🔒 **安全认证**：支持API密钥验证
-- 📱 **多种格式**：支持Base64和文件上传两种方式
-
-## 技术栈
-
-- **FastAPI**: 现代高性能Web框架
-- **PaddleOCR**: 百度开源OCR引擎
-- **OpenCV**: 图像处理库
-- **Uvicorn**: 高性能ASGI服务器
-- **Loguru**: 现代Python日志库
 
 ## 🚀 快速开始
 
@@ -74,463 +89,531 @@ pip install -r requirements.txt
 
 > ⏰ **安装提示**：安装过程可能需要几分钟时间，特别是PaddlePaddle和PaddleOCR这两个包比较大。如果安装PaddlePaddle时遇到问题，可以参考[PaddlePaddle官方安装指南](https://www.paddlepaddle.org.cn/install/quick)。
 
-### 4. 配置优化（推荐）
-
-根据您的服务器性能选择合适的配置：
+### 4. 快速启动
 
 ```bash
-# 查看当前配置和建议
-python app/config.py
-
-# 复制配置模板
-cp config_template.env .env
-
-# 编辑配置文件，选择适合您服务器的配置方案
-# 详细说明请参考：CONFIG_OPTIMIZATION.md
-```
-
-### 5. 启动服务
-
-#### 开发环境启动
-
-```bash
+# 开发环境启动
 python run.py --debug
+
+# 生产环境启动
+python run.py --host 0.0.0.0 --port 8000 --workers 4
 ```
 
-#### 生产环境启动
+### 5. 验证服务
+
+服务启动后，可以通过以下方式验证：
 
 ```bash
-# 使用默认配置（推荐让配置文件决定）
-python run.py
+# 访问API文档
+open http://localhost:8000/docs
 
-# 或者手动指定参数
-python run.py --host 0.0.0.0 --port 8080 --workers 4
+open http://localhost:8000/redoc
+# 健康检查
+curl http://localhost:8000/api/v1/health
+
+# 测试API
+curl -X POST "http://localhost:8000/api/v1/ocr/idcard" \
+     -H "Content-Type: application/json" \
+     -d '{"image":"BASE64_IMAGE_DATA"}'
 ```
 
-**启动参数说明**：
-- `--host`：服务监听的IP地址，0.0.0.0表示监听所有网络接口
-- `--port`：服务监听的端口号
-- `--workers`：工作进程数量（会覆盖配置文件设置）
-- `--debug`：是否启用调试模式（开发环境使用）
-- `--log-level`：日志级别（DEBUG/INFO/WARNING/ERROR/CRITICAL）
+## 🔧 配置管理
 
-## ⚙️ 配置说明
+### 配置管理工具
 
-本项目支持灵活的配置方式，可以通过环境变量或配置文件进行定制。
-
-### 🎯 快速配置
-
-根据您的服务器性能，选择预设的配置方案：
+本服务提供了强大的配置管理工具，所有功能已整合到 `app/config.py` 中，支持智能配置分析和优化建议：
 
 ```bash
-# 方案A：高性能服务器（16GB+内存，8核+CPU）
-export WORKERS=8
-export OCR_PROCESS_POOL_SIZE=8
-export MAX_CONCURRENT_REQUESTS=16
-export MEMORY_OPTIMIZATION=False
+# 查看完整配置摘要（默认行为）
+python -m app.config
 
-# 方案B：内存受限服务器（4-8GB内存，4核CPU）
-export WORKERS=2
-export OCR_PROCESS_POOL_SIZE=2
-export MAX_CONCURRENT_REQUESTS=4
-export MEMORY_OPTIMIZATION=True
+# 显示系统信息
+python -m app.config --system-info
 
-# 方案C：生产环境推荐（8-16GB内存，4-8核CPU）
-export WORKERS=4
+# 性能分析报告
+python -m app.config --performance
+
+# 部署配置指南
+python -m app.config --deployment
+
+# 验证当前配置
+python -m app.config --validate
+
+# 生成优化配置文件
+python -m app.config --generate-env
+
+# 显示所有信息
+python -m app.config --all
+```
+
+### 智能配置分析
+
+配置管理工具提供以下功能：
+
+- 🔍 **智能分析**：自动检测系统硬件环境，分析配置合理性
+- 📊 **性能评估**：提供0-100分的配置评分和优化建议
+- 🎯 **个性化建议**：根据服务器规格提供量身定制的配置方案
+- 🚀 **一键部署**：生成优化的.env配置文件和部署命令
+- 📈 **实时监控**：持续监控配置状态和性能表现
+
+### 配置文件说明
+
+可以通过创建 `.env` 文件来自定义配置：
+
+```bash
+# 🚀 性能配置
+WORKERS=4                          # Worker进程数
+OCR_PROCESS_POOL_SIZE=3           # OCR进程池大小
+MAX_CONCURRENT_REQUESTS=8         # 最大并发请求数
+OCR_TASK_TIMEOUT=30               # OCR任务超时时间
+
+# 💾 内存优化配置
+MEMORY_OPTIMIZATION=true          # 启用内存优化
+ENABLE_GC_AFTER_REQUEST=true      # 请求后垃圾回收
+
+# 📝 日志配置
+LOG_LEVEL=WARNING                 # 日志级别
+LOG_ROTATION=20 MB               # 日志轮转大小
+LOG_RETENTION=1 week             # 日志保留时间
+
+# 🔒 安全配置
+API_KEYS=your_secret_key_1,your_secret_key_2
+
+# 🌐 网络配置
+HOST=0.0.0.0                     # 监听地址
+PORT=8000                        # 监听端口
+
+# 💾 路径配置
+OCR_MODEL_DIR=./models           # OCR模型目录
+LOG_DIR=./logs                   # 日志目录
+```
+
+## ⚡ 性能优化
+
+### 三档配置方案
+
+系统根据服务器规格自动推荐相应方案：
+
+#### 🏆 高性能方案（内存 ≥ 16GB）
+适用于高并发生产环境，内存充足：
+```bash
+export WORKERS=6
 export OCR_PROCESS_POOL_SIZE=4
-export MAX_CONCURRENT_REQUESTS=8
-export MEMORY_OPTIMIZATION=True
-export API_KEYS="your-secret-key-1,your-secret-key-2"
+export MAX_CONCURRENT_REQUESTS=10
+export MEMORY_OPTIMIZATION=false
+export LOG_LEVEL=INFO
+```
+- **特点**：高并发、高性能
+- **内存需求**：~8-12GB
+- **并发能力**：16+ 并发
+
+#### ⚖️ 标准方案（内存 8-16GB）
+适用于中等负载、标准生产环境：
+```bash
+export WORKERS=3
+export OCR_PROCESS_POOL_SIZE=2
+export MAX_CONCURRENT_REQUESTS=6
+export MEMORY_OPTIMIZATION=true
+export LOG_LEVEL=WARNING
+```
+- **特点**：性能与内存平衡
+- **内存需求**：~4-6GB
+- **并发能力**：8 并发
+
+#### 💾 节能方案（内存 < 8GB）
+适用于资源受限环境、测试环境：
+```bash
+export WORKERS=1
+export OCR_PROCESS_POOL_SIZE=1
+export MAX_CONCURRENT_REQUESTS=2
+export MEMORY_OPTIMIZATION=true
+export ENABLE_GC_AFTER_REQUEST=true
+export LOG_LEVEL=ERROR
+```
+- **特点**：低内存占用
+- **内存需求**：~1-2GB
+- **并发能力**：2 并发
+
+### 内存优化
+
+针对内存受限环境的特殊优化：
+
+| 配置项 | 优化前 | 优化后 | 降幅 |
+|--------|--------|--------|------|
+| Worker进程 | 4 | 1 | 75% |
+| OCR进程池 | 4 | 2 | 50% |  
+| 总进程数 | 16 | 2 | 87.5% |
+| 预计内存 | 8-10GB | 1-1.5GB | 85% |
+
+### 性能监控
+
+```bash
+# 内存使用监控
+python memory_monitor.py
+
+# 持续监控
+python memory_monitor.py --monitor --interval 10 --threshold 1024
+
+# 性能分析
+python -m app.config --performance
 ```
 
-### 📊 核心性能参数
+## API接口
 
-| 参数 | 说明 | 推荐值 | 性能影响 |
-|------|------|--------|----------|
-| `WORKERS` | Uvicorn工作进程数 | CPU核心数 | 影响并发处理能力 |
-| `OCR_PROCESS_POOL_SIZE` | OCR处理进程池大小 | 2-8 | 每个进程约占1GB内存 |
-| `MAX_CONCURRENT_REQUESTS` | 最大并发请求数 | OCR进程数×2 | 防止内存溢出 |
-| `OCR_TASK_TIMEOUT` | OCR任务超时时间(秒) | 15-60 | 防止任务卡死 |
+### 基础接口
 
-### 💾 内存优化参数
-
-| 参数 | 说明 | 推荐场景 |
-|------|------|----------|
-| `MEMORY_OPTIMIZATION` | 启用内存优化 | 内存<16GB时启用 |
-| `ENABLE_GC_AFTER_REQUEST` | 请求后强制垃圾回收 | 生产环境推荐启用 |
-
-### 🔒 安全配置
-
-| 参数 | 说明 | 示例 |
+| 接口 | 方法 | 说明 |
 |------|------|------|
-| `API_KEYS` | API密钥列表（逗号分隔） | `"key1,key2,key3"` |
-| `DEBUG` | 调试模式 | 生产环境设为False |
+| `/health` | GET | 健康检查 |
+| `/docs` | GET | API文档 |
+| `/api/v1/ocr/idcard` | POST | 身份证识别（JSON） |
+| `/api/v1/ocr/idcard/upload` | POST | 身份证识别（文件上传） |
+| `/api/v1/ocr/batch` | POST | 批量识别 |
 
-### 📝 日志配置
+### 示例代码
 
-| 参数 | 说明 | 推荐值 |
-|------|------|--------|
-| `LOG_LEVEL` | 日志级别 | 生产:WARNING, 开发:DEBUG |
-| `LOG_ROTATION` | 日志轮转大小 | 20-50MB |
-| `LOG_RETENTION` | 日志保留时间 | 1 week - 1 month |
+#### Python示例
+```python
+import requests
+import base64
 
-> 📖 **详细配置指南**：更多配置选项和优化建议请参考 [CONFIG_OPTIMIZATION.md](CONFIG_OPTIMIZATION.md)
+# 读取图片并转换为base64
+with open("idcard.jpg", "rb") as f:
+    image_data = base64.b64encode(f.read()).decode()
 
-## 🔧 配置工具
+# 发送识别请求
+response = requests.post(
+    "http://localhost:8000/api/v1/ocr/idcard",
+    json={"image": image_data}
+)
 
-### 配置检查和摘要
+result = response.json()
+print(result)
+```
 
+#### curl示例
 ```bash
-# 查看当前配置摘要和优化建议
-python app/config.py
-```
+# Base64方式
+curl -X POST "http://localhost:8000/api/v1/ocr/idcard" \
+     -H "Content-Type: application/json" \
+     -d '{"image":"BASE64_IMAGE_DATA"}'
 
-### 配置模板
-
-项目提供了 `config_template.env` 配置模板，包含不同场景的预设配置：
-
-```bash
-# 复制并编辑配置模板
-cp config_template.env .env
-# 编辑 .env 文件，选择适合的配置方案
-```
-
-## 📡 使用API接口
-
-服务启动后，可以通过以下方式使用API：
-
-### 1. 📚 查看API文档
-
-在浏览器中访问：`http://服务器IP:端口/docs`
-
-例如：`http://localhost:8000/docs`
-
-这里提供了交互式的API文档，使用全中文界面，可以直接在页面上测试API功能。文档包含了所有API的详细说明、请求参数和响应格式。
-
-如果您喜欢另一种文档风格，也可以访问：`http://服务器IP:端口/redoc`
-
-### 2. 🆔 身份证识别API
-
-#### 单张身份证识别 (Base64方式)
-
-**请求地址**：`/api/v1/ocr/idcard`
-
-**请求方法**：POST
-
-**请求参数**：
-```json
-{
-  "image": "base64编码的图片数据",
-  "side": "front"  // 可选值：front（正面）、back（背面）
-}
-```
-
-**响应结果**：
-```json
-{
-  "code": 0,
-  "message": "识别成功",
-  "data": {
-    "name": "张三",
-    "sex": "男",
-    "nation": "汉",
-    "birth": "1990-01-01",
-    "address": "北京市朝阳区...",
-    "id_number": "110101199001010123",
-    "issue_authority": null,
-    "valid_period": null
-  }
-}
-```
-
-#### 单张身份证识别 (文件上传方式)
-
-**请求地址**：`/api/v1/ocr/idcard/upload`
-
-**请求方法**：POST
-
-**请求参数**：
-- `image`：上传的身份证图片文件（form-data格式）
-- `side`：身份证正反面，可选值：front（正面）、back（背面）
-
-**请求示例**：
-```bash
+# 文件上传方式
 curl -X POST "http://localhost:8000/api/v1/ocr/idcard/upload" \
-  -H "accept: application/json" \
-  -F "image=@/path/to/idcard.jpg" \
-  -F "side=front"
+     -F "file=@idcard.jpg"
 ```
 
-**响应结果**：与Base64方式相同
+### 返回格式
 
-#### 批量身份证识别 (Base64方式)
-
-**请求地址**：`/api/v1/ocr/idcard/batch`
-
-**请求方法**：POST
-
-**请求参数**：
 ```json
 {
-  "images": [
-    {
-      "image": "base64编码的图片数据1",
-      "side": "front"
-    },
-    {
-      "image": "base64编码的图片数据2",
-      "side": "back"
-    }
-  ]
-}
-```
-
-#### 批量身份证识别 (文件上传方式)
-
-**请求地址**：`/api/v1/ocr/idcard/batch/upload`
-
-**请求方法**：POST
-
-**请求参数**：
-- `front_image`：上传的身份证正面图片文件（可选）
-- `back_image`：上传的身份证背面图片文件（可选）
-
-### 3. 🔍 健康检查API
-
-**请求地址**：`/api/v1/health`
-
-**请求方法**：GET
-
-**响应结果**：
-```json
-{
-  "code": 0,
-  "message": "服务正常",
+  "success": true,
   "data": {
-    "status": "healthy",
-    "version": "0.1.2",
-    "timestamp": 1626345678
-  }
+    "card_type": "FRONT",
+    "card_info": {
+      "name": "张三",
+      "sex": "男",
+      "nation": "汉",
+      "birth": "1990年1月1日",
+      "address": "北京市朝阳区某某街道",
+      "id_number": "110101199001011234"
+    }
+  },
+  "message": "识别成功",
+  "request_id": "uuid-string"
 }
 ```
 
-## 🧪 使用测试脚本
+## 🚀 部署指南
 
-项目提供了一个测试脚本`test_api.py`，可以用来测试API接口是否正常工作。
-
-### 测试健康检查API
+### Docker部署
 
 ```bash
-python test_api.py --health
+# 构建镜像
+docker build -t sfzocr:latest .
+
+# 运行容器
+docker run -d \
+  --name sfzocr \
+  -p 8000:8000 \
+  -e WORKERS=4 \
+  -e OCR_PROCESS_POOL_SIZE=3 \
+  sfzocr:latest
 ```
-
-### 测试单张身份证识别
-
-```bash
-# 测试身份证正面识别 (Base64方式)
-python test_api.py --image 身份证正面图片路径.jpg --side front
-
-# 测试身份证背面识别 (Base64方式)
-python test_api.py --image 身份证背面图片路径.jpg --side back
-
-# 测试身份证正面识别 (文件上传方式)
-python test_api.py --image 身份证正面图片路径.jpg --side front --upload
-
-# 测试身份证背面识别 (文件上传方式)
-python test_api.py --image 身份证背面图片路径.jpg --side back --upload
-```
-
-### 测试批量身份证识别
-
-```bash
-# 测试批量身份证识别 (Base64方式)
-python test_api.py --front 身份证正面图片路径.jpg --back 身份证背面图片路径.jpg
-
-# 测试批量身份证识别 (文件上传方式)
-python test_api.py --front 身份证正面图片路径.jpg --back 身份证背面图片路径.jpg --upload
-```
-
-### 自定义API地址
-
-如果服务不是运行在默认地址，可以使用`--url`参数指定API地址：
-
-```bash
-python test_api.py --url http://服务器IP:端口/api/v1 --health
-```
-
-## 📷 图片要求
-
-为了获得最佳识别效果，上传的身份证图片应满足以下要求：
-
-1. **图片清晰**：无严重模糊、反光
-2. **完整显示**：身份证完整显示在图片中
-3. **光线均匀**：无过度曝光或过暗现象
-4. **主体突出**：身份证尽量占据图片的主要部分
-
-> 💡 **处理能力**：服务会对图片进行预处理（包括旋转校正、裁剪等），但原始图片质量仍然是影响识别准确率的关键因素。
-
-## 🚨 常见问题解答
-
-### 1. 服务启动失败
-
-**问题**：运行`python run.py`后，服务无法正常启动。
-
-**解决方法**：
-- 查看启动时的配置信息，确认内存是否足够
-- 检查日志文件（logs目录下）查看具体错误信息
-- 确认所有依赖包已正确安装：`pip list | grep paddle`
-- 确认Python版本是3.7或更高：`python --version`
-- 如果是内存不足，尝试使用内存受限配置：
-  ```bash
-  export WORKERS=1
-  export OCR_PROCESS_POOL_SIZE=1
-  python run.py
-  ```
-
-### 2. 识别准确率不高
-
-**问题**：身份证信息识别不准确或识别不全。
-
-**解决方法**：
-- 提高上传图片的质量和清晰度
-- 确保身份证在图片中完整显示
-- 避免图片中有复杂背景或其他干扰元素
-- 调整光线，避免反光和阴影
-- 图片尺寸建议不超过2000x2000像素
-
-### 3. 服务响应慢
-
-**问题**：API请求响应时间过长。
-
-**解决方法**：
-- 查看当前配置：`python app/config.py`
-- 根据服务器性能增加OCR进程数：
-  ```bash
-  export OCR_PROCESS_POOL_SIZE=4  # 根据内存调整
-  export MAX_CONCURRENT_REQUESTS=8
-  ```
-- 减小上传图片的尺寸
-- 升级服务器硬件配置
-- 使用高性能配置方案（参考配置优化指南）
-
-### 4. 内存占用过高
-
-**问题**：服务运行一段时间后内存占用过高。
-
-**解决方法**：
-- 启用内存优化配置：
-  ```bash
-  export MEMORY_OPTIMIZATION=True
-  export ENABLE_GC_AFTER_REQUEST=True
-  ```
-- 减少进程数量：
-  ```bash
-  export WORKERS=2
-  export OCR_PROCESS_POOL_SIZE=2
-  ```
-- 使用内存受限配置方案
-- 定期重启服务或增加服务器内存
-
-### 5. 422参数验证错误
-
-**问题**：请求返回422状态码。
-
-**解决方法**：
-- 确保使用正确的请求格式（multipart/form-data用于文件上传）
-- 检查`side`参数值是否为`front`、`back`或`both`
-- 确认文件参数名为`image`
-- 如果配置了API密钥，确认提供了`X-API-KEY`头部
-- 查看详细错误信息（新版本会提供详细的验证失败信息）
-
-### 6. 上传图片失败
-
-**问题**：使用Base64方式上传图片时出现编码错误。
-
-**解决方法**：
-- 尝试使用文件上传API（`/api/v1/ocr/idcard/upload`）代替Base64编码方式
-- 确保Base64编码正确，不要包含换行符
-- 检查图片格式是否支持（支持JPG、PNG、BMP等常见格式）
-
-## 📊 性能监控
-
-### 内存和CPU监控
-
-```bash
-# 查看进程内存使用
-ps aux | grep python
-
-# 实时系统监控
-htop
-
-# 查看系统内存
-free -h
-```
-
-### 日志监控
-
-```bash
-# 实时查看日志
-tail -f logs/sfzocr.log
-
-# 查看错误统计
-grep ERROR logs/sfzocr.log | wc -l
-
-# 查看最近的错误
-tail -n 100 logs/sfzocr.log | grep ERROR
-```
-
-## 📖 文档资源
-
-- 📋 **[配置优化指南](CONFIG_OPTIMIZATION.md)** - 详细的性能调优说明
-- 🔧 **[配置模板](config_template.env)** - 不同场景的配置示例
-- 📝 **[API文档](http://localhost:8000/docs)** - 交互式API文档（需先启动服务）
-
-## 🔒 安全建议
 
 ### 生产环境部署
 
-1. **配置API密钥**：
-   ```bash
-   export API_KEYS="your-strong-secret-key-1,your-strong-secret-key-2"
-   ```
+#### 1. 使用配置管理工具
+```bash
+# 检查系统环境
+python -m app.config --system-info
 
-2. **关闭调试模式**：
-   ```bash
-   export DEBUG=False
-   ```
+# 生成优化配置
+python -m app.config --generate-env
 
-3. **配置适当的日志级别**：
-   ```bash
-   export LOG_LEVEL=WARNING
-   ```
+# 验证配置
+python -m app.config --validate
 
-4. **限制网络访问**：
-   - 配置防火墙规则
-   - 使用反向代理（如Nginx）
-   - 配置HTTPS
+# 启动服务
+python run.py
+```
 
-## 📞 技术支持
+#### 2. Nginx反向代理配置
+```nginx
+upstream sfzocr_backend {
+    server 127.0.0.1:8000;
+    server 127.0.0.1:8001;
+    server 127.0.0.1:8002;
+    server 127.0.0.1:8003;
+}
 
-如果您在使用过程中遇到任何问题，可以通过以下方式获取帮助：
+server {
+    listen 80;
+    server_name your-domain.com;
+    
+    location / {
+        proxy_pass http://sfzocr_backend;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+}
+```
 
-1. **查看配置和日志**：
-   ```bash
-   python app/config.py  # 查看当前配置
-   tail -f logs/sfzocr.log  # 查看日志
-   ```
+#### 3. 系统服务配置
+```ini
+# /etc/systemd/system/sfzocr.service
+[Unit]
+Description=身份证OCR识别服务
+After=network.target
 
-2. **参考文档**：
-   - [配置优化指南](CONFIG_OPTIMIZATION.md)
-   - [GitHub Issues](https://github.com/yourusername/sfzocr/issues)
+[Service]
+Type=simple
+User=www-data
+WorkingDirectory=/path/to/sfzocr
+Environment=PATH=/path/to/venv/bin
+ExecStart=/path/to/venv/bin/python run.py
+Restart=always
 
-3. **联系支持**：
-   - GitHub项目页面提交Issue
-   - 发送邮件至技术支持邮箱
+[Install]
+WantedBy=multi-user.target
+```
+
+### 集群部署
+
+```bash
+# 启动多个实例
+python run.py --port 8000 &
+python run.py --port 8001 &
+python run.py --port 8002 &
+python run.py --port 8003 &
+
+# 使用负载均衡器分发请求
+```
+
+## 🔍 故障排查
+
+### 常见问题
+
+#### 1. 内存不足 (OOM)
+```bash
+# 启用内存优化模式
+export MEMORY_OPTIMIZATION=true
+export ENABLE_GC_AFTER_REQUEST=true
+
+# 减少进程数
+export WORKERS=1
+export OCR_PROCESS_POOL_SIZE=1
+export MAX_CONCURRENT_REQUESTS=2
+
+# 监控内存使用
+python memory_monitor.py --monitor
+```
+
+#### 2. 识别准确率低
+```bash
+# 检查图片质量
+# 图片应该清晰、光照充足、避免反光
+# 推荐分辨率：1000x600以上
+
+# 调整OCR参数
+export OCR_DET_DB_THRESH=0.3
+export OCR_DET_DB_BOX_THRESH=0.6
+export OCR_DROP_SCORE=0.5
+```
+
+#### 3. 服务响应慢
+```bash
+# 增加进程数（确保有足够内存）
+export WORKERS=4
+export OCR_PROCESS_POOL_SIZE=3
+export MAX_CONCURRENT_REQUESTS=8
+
+# 启用性能优化
+export MEMORY_OPTIMIZATION=false
+
+# 检查性能瓶颈
+python -m app.config --performance
+```
+
+#### 4. API密钥验证失败
+```bash
+# 设置API密钥
+export API_KEYS=your_secret_key_1,your_secret_key_2
+
+# 在请求头中添加密钥
+curl -H "X-API-KEY: your_secret_key_1" \
+     -X POST "http://localhost:8000/api/v1/ocr/idcard" \
+     -d '{"image":"BASE64_DATA"}'
+```
+
+### 日志分析
+
+```bash
+# 查看实时日志
+tail -f logs/sfzocr.log
+
+# 查看错误日志
+grep ERROR logs/sfzocr.log
+
+# 查看性能日志
+grep "耗时" logs/sfzocr.log
+```
+
+### 诊断工具
+
+```bash
+# 完整系统诊断
+python -m app.config --all
+
+# 配置验证
+python -m app.config --validate
+
+# 内存监控
+python memory_monitor.py
+
+# API测试
+python test_api.py
+```
+
+## 开发说明
+
+### 项目结构
+```
+sfzocr/
+├── app/                    # 应用核心代码
+│   ├── __init__.py
+│   ├── main.py            # FastAPI应用入口
+│   ├── config.py          # 配置管理
+│   ├── api/               # API路由
+│   │   ├── __init__.py
+│   │   ├── endpoints.py   # API端点实现
+│   │   └── models.py      # 数据模型
+│   ├── core/              # 核心功能
+│   │   ├── __init__.py
+│   │   ├── ocr_engine.py  # OCR引擎
+│   │   └── image_processor.py  # 图像处理
+│   └── utils/             # 工具函数
+│       ├── __init__.py
+│       ├── logger.py      # 日志配置
+│       ├── validators.py  # 数据验证
+│       └── concurrency.py # 并发控制
+├── memory_monitor.py       # 内存监控工具
+├── run.py                 # 服务启动脚本
+├── requirements.txt       # 依赖包列表
+├── .env.example          # 配置文件示例
+└── README.md             # 项目文档
+```
+
+### 开发环境搭建
+
+```bash
+# 克隆项目
+git clone https://github.com/yourusername/sfzocr.git
+cd sfzocr
+
+# 创建虚拟环境
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+# venv\Scripts\activate   # Windows
+
+# 安装依赖
+pip install -r requirements.txt
+
+# 启动开发服务器
+python run.py --debug
+```
+
+### API测试
+
+```bash
+# 运行API测试
+python test_api.py
+
+# 运行性能测试
+python test_performance.py
+
+# 运行所有测试
+python -m pytest tests/
+```
+
+## 🔄 版本更新记录
+
+### v0.1.4 (最新) ⭐
+- **🤖 新增自动证件类型检测功能**：无需手动指定side参数，系统智能识别证件类型
+- **🌍 外国人永久居留身份证支持**：完整支持新版和旧版外国人永久居留身份证
+- **🚀 性能优化功能**：快速模式、结果缓存、图像预处理优化、OCR引擎参数调优
+- **📊 检测准确率100%**：所有证件类型检测准确率达到100%
+- **🔄 完全向后兼容**：保持现有API调用方式不变
+- **🔧 智能配置管理**：新增配置管理工具，支持智能分析和优化建议
+- **💾 内存优化增强**：支持内存受限环境，最低1GB内存即可运行
+- **📝 完整配置指南**：包含性能优化、内存优化、部署等完整文档
+
+### v0.1.3
+- 优化内存管理和性能配置
+- 增强错误处理和日志记录
+- 添加配置优化指南
+
+### v0.1.2  
+- 基础身份证识别功能
+- 支持批量处理
+- RESTful API接口
+
+## 🔄 版本兼容性
+
+- **向后兼容**：所有优化功能均为可选，不影响现有API
+- **默认行为**：未启用优化时行为与之前版本一致
+- **渐进升级**：可以逐步启用各项优化功能
 
 ## 📄 许可证
 
 本项目采用MIT许可证，详情请参阅LICENSE文件。
 
+## 🤝 贡献
+
+欢迎提交Issue和Pull Request来改进本项目。
+
+## 📞 技术支持
+
+如需技术支持或有任何问题，请：
+
+1. 首先运行完整的配置检查：
+   ```bash
+   python -m app.config --all
+   ```
+
+2. 查看服务日志：
+   ```bash
+   tail -100 logs/sfzocr.log
+   ```
+
+3. 收集系统信息：
+   ```bash
+   python -m app.config --system-info > system_info.txt
+   ```
+
 ---
+
+**💡 提示**：建议从平衡模式开始使用，根据实际需求调整配置。通过配置管理工具可以获得个性化的优化建议。
 
 *🚀 持续优化中，建议关注项目更新获取最新功能和性能改进。* 
