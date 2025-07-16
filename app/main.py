@@ -6,6 +6,9 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from fastapi.openapi.utils import get_openapi
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+import json
 
 from app.api.endpoints import router as api_router
 from app.config import PROJECT_NAME, VERSION, API_V1_PREFIX, CORS_ORIGINS, ALLOWED_HOSTS
@@ -22,6 +25,33 @@ app = FastAPI(
     docs_url=None,  # 禁用默认的Swagger UI
     redoc_url=None  # 禁用默认的ReDoc
 )
+
+# 添加422错误的详细处理
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """处理422参数验证错误，提供详细错误信息"""
+    error_details = []
+    for error in exc.errors():
+        error_detail = {
+            "field": " -> ".join(str(x) for x in error["loc"]),
+            "message": error["msg"],
+            "type": error["type"],
+            "input": error.get("input", "N/A")
+        }
+        error_details.append(error_detail)
+    
+    # 记录详细错误信息
+    logger.error(f"422参数验证失败 - URL: {request.url} - 错误详情: {json.dumps(error_details, ensure_ascii=False)}")
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "code": 1001,
+            "message": "请求参数验证失败",
+            "data": None,
+            "validation_errors": error_details
+        }
+    )
 
 # 添加CORS中间件
 app.add_middleware(
